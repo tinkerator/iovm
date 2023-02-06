@@ -1,0 +1,5 @@
+zappem.net/pub/io/gpio v0.8.0 h1:4x3oZI1VgGZuoiUCERxqtf6XF5Zg5ow0h0tTonn5adE=
+zappem.net/pub/io/gpio v0.8.0/go.mod h1:mtBMnQDNPmTF9ZhhnHg6qbiIzklVNlMwLw1AIBBTuLo=
+zappem.net/pub/io/gpio v0.8.1 h1:mPiXUo39EJhCw1EmLnij50N1cfh2lEGpl+fBq7vku88=
+zappem.net/pub/io/gpio v0.8.1/go.mod h1:mtBMnQDNPmTF9ZhhnHg6qbiIzklVNlMwLw1AIBBTuLo=
+zappem.net/pub/io/iotracer v0.7.1/go.mod h1:Af1H3irH6ffeQ2EVIA0sKJxNSSIkuqG2yIAVKWd9ZSQ=
