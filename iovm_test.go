@@ -60,15 +60,17 @@ func TestEdgeCases(t *testing.T) {
 	if c.String() != "Invalid(0)" {
 		t.Fatalf("bad code is not \"Invalid(0)\": %v", c)
 	}
-	if _, err := Build("ladder"); err == nil {
-		t.Fatal("bad code appears valid?")
-	}
+	defer func() {
+		if res := recover(); res == nil {
+			t.Errorf("bad code should panic but didn't")
+		}
+	}()
+	Build("ladder")
 }
 
 func TestBits(t *testing.T) {
 	ex := &Executable{Name: "bit"}
-	var err error
-	if ex.Ops, err = Build(
+	ex.Ops = Build(
 		Raise(Bit(ex, 0)),
 		JumpFalse(Bit(ex, 0), 1),
 		Or(Bit(ex, 2), Bit(ex, 0), Bit(ex, 1)),
@@ -79,9 +81,7 @@ func TestBits(t *testing.T) {
 			Xor(Bit(ex, 4), Bit(ex, 0), Bit(ex, 1)),
 		},
 		Copy(Bit(ex, 5), Bit(ex, 4)),
-	); err != nil {
-		t.Fatalf("failed to build \"bit\" code sequence: %v", err)
-	}
+	)
 
 	// Validate that this disassembles as expected.
 	{
@@ -125,14 +125,11 @@ func TestBits(t *testing.T) {
 
 func TestMilestone1(t *testing.T) {
 	ex := &Executable{}
-	var err error
-	ex.Ops, err = Build(
+	ex.Ops = Build(
 		Xor(Bit(ex, 27), Bit(ex, 27), Bit(ex, 17)),
 		Not(Bit(ex, 17), Bit(ex, 17)),
 	)
-	if err != nil {
-		t.Fatalf("unable to build milestone 1 code: %v", err)
-	}
+
 	max, ave, sigma := ex.Latency()
 	if max != ave || ave != sigma {
 		t.Fatalf("bad latencies for never run executable: %v %v %v", max, ave, sigma)
@@ -164,9 +161,8 @@ func TestMilestone1(t *testing.T) {
 }
 
 func TestMilestone2(t *testing.T) {
-	var err error
 	ex := &Executable{}
-	ex.Ops, err = Build(
+	ex.Ops = Build(
 		Xor(Bit(ex, 27), Bit(ex, 27), Bit(ex, 17)),
 		Not(Bit(ex, 17), Bit(ex, 17)),
 		JumpTrue(Bit(ex, 17), 2),
@@ -174,9 +170,6 @@ func TestMilestone2(t *testing.T) {
 		Jump(1),
 		Raise(Bit(ex, 10)),
 	)
-	if err != nil {
-		t.Fatalf("unable to build milestone 2 code: %v", err)
-	}
 	max, ave, sigma := ex.Latency()
 	if max != ave || ave != sigma {
 		t.Fatalf("bad latencies for never run executable: %v %v %v", max, ave, sigma)
@@ -245,7 +238,7 @@ func TestMilestone3(t *testing.T) {
 	ex1 := &Executable{Name: "ex1"}
 	ex2 := &Executable{Name: "     ex2"}
 
-	builder := func(ex *Executable) ([]Code, error) {
+	builder := func(ex *Executable) []Code {
 		return Build(
 			JumpOrRaise(Bit(ex, 1), 4),  // jump if ex[1] is true, otherwise set it to true
 			Not(Bit(ex, 0), Bit(ex, 1)), // should set ex[0] to false.
@@ -261,13 +254,8 @@ func TestMilestone3(t *testing.T) {
 	ex1.SetProfiler(tr)
 	ex2.SetProfiler(tr)
 
-	var err error
-	if ex1.Ops, err = builder(ex1); err != nil {
-		t.Fatalf("unable to build ex1: %v", err)
-	}
-	if ex2.Ops, err = builder(ex1); err != nil { // yes, the same executable flag state from ex1.
-		t.Fatalf("unable to build ex2: %v", err)
-	}
+	ex1.Ops = builder(ex1)
+	ex2.Ops = builder(ex1)
 
 	// Validate that this disassembles as expected.
 	{
@@ -363,8 +351,7 @@ func TestMilestone3(t *testing.T) {
 func TestMath1(t *testing.T) {
 	ex1 := &Executable{Name: "ex1"}
 	n := gpio.NewVector(5)
-	var err error
-	if ex1.Ops, err = Build(
+	ex1.Ops = Build(
 		Copy(Value(n, 1), Int(4)),
 		JumpGEq(Int(4), Value(n, 1), 2),
 		Add(Value(n, 1), Value(n, 1), Value(n, 1)),
@@ -376,9 +363,7 @@ func TestMath1(t *testing.T) {
 		Copy(Value(n, 4), Value(n, 0)),
 		JumpEq(Value(n, 3), Value(n, 4), 1),
 		Copy(Value(n, 1), Value(n, 3)),
-	); err != nil {
-		t.Fatalf("failed to build program: %v", err)
-	}
+	)
 
 	// Validate that this disassembles as expected.
 	{
@@ -403,7 +388,7 @@ func TestMath1(t *testing.T) {
 		}
 	}
 
-	if err = ex1.Run(time.Now()); err != nil {
+	if err := ex1.Run(time.Now()); err != nil {
 		t.Fatalf("failed to run ex1: %v", err)
 	}
 	for i, x := range []int64{2, 8, 6, 0, 0} {
@@ -480,17 +465,14 @@ func (k *keep) Edge(ex *Executable, line int, before bool) {
 func TestMath2(t *testing.T) {
 	ex1 := &Executable{Name: "F"}
 	n := gpio.NewVector(3)
-	var err error
-	if err = n.Set(0, 100); err != nil {
+	if err := n.Set(0, 100); err != nil {
 		t.Fatalf("unable to set n[0] to 100: %v", err)
 	}
-	if ex1.Ops, err = Build(
+	ex1.Ops = Build(
 		Add(Value(n, 1), Value(n, 1), Int(1)),
 		JumpLT(Value(n, 1), Value(n, 0), 1),
 		Raise(Bit(ex1, 0)),
-	); err != nil {
-		t.Fatalf("failed to build program: %v", err)
-	}
+	)
 	n.SetAlias("R")
 
 	// Validate that this disassembles as expected.
@@ -508,7 +490,7 @@ func TestMath2(t *testing.T) {
 		}
 	}
 	for i := 0; i < 102; i++ {
-		if err = ex1.Run(time.Now()); err != nil {
+		if err := ex1.Run(time.Now()); err != nil {
 			t.Fatalf("failed to run ex1: %v", err)
 		}
 		if bit, err := ex1.Get(0); err != nil {
@@ -582,6 +564,67 @@ func TestMath2(t *testing.T) {
 			if i >= len(want) || line != want[i] {
 				t.Errorf("unexpected [%2d]: %s", i, line)
 			}
+		}
+	}
+}
+
+func TestIfElseIfNot(t *testing.T) {
+	ex := &Executable{Name: "F"}
+
+	ex.Ops = Build(
+		IfElse(Bit(ex, 0), []Code{
+			Raise(Bit(ex, 1)),
+		}, IfNot(Bit(ex, 1), []Code{
+			Raise(Bit(ex, 0)),
+		})),
+	)
+
+	// Validate that this disassembles as expected.
+	{
+		want := []string{
+			"if !<F[0]> { jump +2 }",
+			"<F[1]> = true",
+			"jump +2",
+			"if <F[1]> { jump +1 }",
+			"<F[0]> = true",
+		}
+		for i := 0; i < len(ex.Ops); i++ {
+			line := ex.Ops[i].String()
+			if i >= len(want) || line != want[i] {
+				t.Errorf("unexpected [%2d]: %s", i, line)
+			}
+		}
+	}
+
+	tr := &foo{t: t}
+	ex.SetTracer(tr)
+
+	for i := 0; i < 2; i++ {
+		if err := ex.Run(time.Now()); err != nil {
+			t.Fatalf("run %d failed: %v", i, err)
+		}
+	}
+
+	masks := []uint64{
+		0, // start
+		1, // read F[0]
+		3, // read F[1]
+		3,
+		3,
+	}
+	values := []uint64{
+		0,
+		0,
+		0,
+		1, // raise F[0]
+		3, // raise F[1]
+	}
+	for i, v := range tr.values {
+		if m := tr.masks[i]; masks[i] != m {
+			t.Errorf("%d: bad mask got=%03x want=%03x", i, m, masks[i])
+		}
+		if values[i] != v {
+			t.Errorf("%d: bad mask got=%03x want=%03x", i, v, values[i])
 		}
 	}
 }

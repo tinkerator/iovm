@@ -387,19 +387,43 @@ func JumpGEq(a, b *State, step int) Code {
 // Build is used to concatenate code segments. The code values can be
 // individual or sequences of []Code. Once built, scratch registers
 // are assigned.
-func Build(code ...interface{}) ([]Code, error) {
+func Build(code ...interface{}) []Code {
 	var ops []Code
 	for i, c := range code {
 		switch t := c.(type) {
 		default:
-			return nil, fmt.Errorf("invalid input[%d]: %v of type (%T)", i, c, t)
+			panic(fmt.Sprintf("invalid input[%d]: %v of type (%T)", i, c, t))
 		case Code:
 			ops = append(ops, c.(Code))
 		case []Code:
 			ops = append(ops, c.([]Code)...)
 		}
 	}
-	return ops, nil
+	return ops
+}
+
+// If executes a block if a is true.
+func If(a *State, block []Code) []Code {
+	n := len(block)
+	return Build(JumpFalse(a, n), block)
+}
+
+// IfNot executes a block if a is true.
+func IfNot(a *State, block []Code) []Code {
+	n := len(block)
+	return Build(JumpTrue(a, n), block)
+}
+
+// IfElse executes block if a is true, otherwise it executes alt.
+func IfElse(a *State, block, alt []Code) []Code {
+	n := len(block)
+	m := len(alt)
+	return Build(
+		JumpFalse(a, n+1),
+		block,
+		Jump(m),
+		alt,
+	)
 }
 
 func (ex *Executable) valid(index int) error {
