@@ -240,11 +240,12 @@ func TestMilestone3(t *testing.T) {
 
 	builder := func(ex *Executable) []Code {
 		return Build(
-			JumpOrRaise(Bit(ex, 1), 4),  // jump if ex[1] is true, otherwise set it to true
-			Not(Bit(ex, 0), Bit(ex, 1)), // should set ex[0] to false.
-			Raise(Bit(ex, 2)),           // this should only be raised while ex[1] is true
-			Lower(Bit(ex, 2)),           // this should only be lowered while ex[1] is true
-			Not(Bit(ex, 1), Bit(ex, 1)), // should set ex[1] to false.
+			Unless(Bit(ex, 1), []Code{ // jump if ex[1] is true, otherwise set it to true
+				Not(Bit(ex, 0), Bit(ex, 1)), // should set ex[0] to false.
+				Raise(Bit(ex, 2)),           // this should only be raised while ex[1] is true
+				Lower(Bit(ex, 2)),           // this should only be lowered while ex[1] is true
+				Not(Bit(ex, 1), Bit(ex, 1)), // should set ex[1] to false.
+			}),
 			Not(Bit(ex, 0), Bit(ex, 1)), // can set ex[0] to true or false.
 		)
 	}

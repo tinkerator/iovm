@@ -426,6 +426,16 @@ func IfElse(a *State, block, alt []Code) []Code {
 	)
 }
 
+// Unless executes a block if a is false. It also atomically raises a.
+func Unless(a *State, block []Code) []Code {
+	n := len(block)
+	return Build(
+		JumpOrRaise(a, n),
+		block,
+	)
+}
+
+// valid confirms that an indexed local flag exists.
 func (ex *Executable) valid(index int) error {
 	if ex == nil {
 		return fmt.Errorf("nil executable for index=%d", index)
